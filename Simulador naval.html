@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Simulador Naval - Taxa de Variação do Calado com a Carga</title>
+  <!-- Biblioteca Gráfica Plotly.js via CDN -->
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <!-- Fontes Técnicas Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      /* Tema Escuro Naval (Padrão - Alta Visibilidade) */
+      --bg-primary: #0b1120;
+      --bg-secondary: #111827;
+      --bg-card: #1e293b;
+      --bg-card-hover: #263449;
+      --border-color: #334155;
+      --text-primary: #f8fafc;
+      --text-secondary: #cbd5e1;
+      --text-muted: #94a3b8;
+      --accent-cyan: #0ea5e9;
+      --accent-cyan-glow: rgba(14, 165, 233, 0.25);
+      --accent-amber: #f59e0b;
+      --accent-amber-glow: rgba(245, 158, 11, 0.2);
+      --accent-emerald: #10b981;
+      --accent-purple: #a855f7;
+      --grid-color: #1e293b;
+      --zero-line: #475569;
+    }
+
+    body.light-theme {
+      /* Tema Claro Técnico (Alternativa para Projetores em Salas Claras) */
+      --bg-primary: #f1f5f9;
+      --bg-secondary: #ffffff;
+      --bg-card: #f8fafc;
+      --bg-card-hover: #f1f5f9;
+      --border-color: #cbd5e1;
+      --text-primary: #0f172a;
+      --text-secondary: #334155;
+      --text-muted: #64748b;
+      --accent-cyan: #0284c7;
+      --accent-cyan-glow: rgba(2, 132, 199, 0.15);
+      --accent-amber: #d97706;
+      --accent-amber-glow: rgba(217, 119, 6, 0.15);
+      --accent-emerald: #059669;
+      --accent-purple: #7e22ce;
+      --grid-color: #e2e8f0;
+      --zero-line: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: background-color 0.25s ease, color 0.25s ease;
+    }
+
+    /* Cabeçalho */
+    header {
+      background-color: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      padding: 14px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .header-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .badge-discipline {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent-cyan);
+    }
+
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }
+
+    header p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-theme {
+      background-color: var(--bg-card);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-theme:hover {
+      background-color: var(--bg-card-hover);
+      border-color: var(--accent-cyan);
+    }
+
+    /* Layout Principal */
+    .main-container {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 410px;
+      gap: 18px;
+      padding: 18px 24px;
+      max-width: 1800px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* Coluna Esquerda: Gráfico + Controles */
+    .left-column {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    .chart-panel {
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 14px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 460px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    #plot-container {
+      width: 100%;
+      flex: 1;
+      min-height: 430px;
+    }
+
+    /* Painel de Controles Interativos */
+    .controls-panel {
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 18px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .slider-label {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .slider-value-badge {
+      font-family: 'JetBrains Mono', monospace;
+      background-color: var(--accent-cyan-glow);
+      color: var(--accent-cyan);
+      border: 1px solid var(--accent-cyan);
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .slider-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 999px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      border: 3px solid #ffffff;
+      box-shadow: 0 0 10px rgba(14, 165, 233, 0.7);
+      cursor: grab;
+      transition: transform 0.15s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:active {
+      cursor: grabbing;
+      transform: scale(1.15);
+    }
+
+    .slider-ticks {
+      display: flex;
+      justify-content: space-between;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      padding: 0 4px;
+    }
+
+    .buttons-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 4px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .preset-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .btn-control {
+      background-color: var(--bg-card);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-control:hover {
+      background-color: var(--bg-card-hover);
+      border-color: var(--accent-cyan);
+      transform: translateY(-1px);
+    }
+
+    .btn-control.active-preset {
+      background-color: var(--accent-cyan-glow);
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+    }
+
+    .btn-toggle-prismatic {
+      background-color: var(--bg-card);
+      color: var(--text-secondary);
+      border: 1px dashed var(--border-color);
+    }
+
+    .btn-toggle-prismatic.active {
+      background-color: rgba(168, 85, 247, 0.15);
+      border: 1px solid var(--accent-purple);
+      color: var(--accent-purple);
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background-color: var(--text-muted);
+      display: inline-block;
+    }
+
+    .btn-toggle-prismatic.active .status-dot {
+      background-color: var(--accent-purple);
+      box-shadow: 0 0 8px var(--accent-purple);
+    }
+
+    /* Coluna Direita: Dashboard em Tempo Real */
+    .right-column {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .dashboard-section-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .metric-card {
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .metric-card.full-width {
+      grid-column: span 2;
+    }
+
+    .metric-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background-color: var(--accent-cyan);
+    }
+
+    .metric-card.card-derivative::before {
+      background-color: var(--accent-amber);
+    }
+
+    .metric-card.card-equation::before {
+      background-color: var(--accent-emerald);
+    }
+
+    .card-header {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .card-formula-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      background-color: var(--bg-card);
+      color: var(--text-muted);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .card-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.55rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.03em;
+    }
+
+    .card-derivative .card-value {
+      color: var(--accent-amber);
+    }
+
+    .card-equation .card-value {
+      font-size: 1.35rem;
+      color: var(--accent-emerald);
+    }
+
+    .card-subtext {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+
+    /* Painel Visual do Casco e Conclusão Física */
+    .hull-visual-card {
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .hull-svg-container {
+      width: 100%;
+      height: 125px;
+      background-color: var(--bg-card);
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .insight-box {
+      background-color: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .insight-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.76rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent-amber);
+    }
+
+    .insight-text {
+      font-size: 0.84rem;
+      line-height: 1.5;
+      color: var(--text-secondary);
+    }
+
+    .insight-highlight {
+      background-color: var(--accent-amber-glow);
+      border: 1px solid var(--accent-amber);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 0.8rem;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .math-mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+    }
+
+    /* Responsividade */
+    @media (max-width: 1150px) {
+      .main-container {
+        grid-template-columns: 1fr;
+      }
+      .cards-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .cards-grid {
+        grid-template-columns: 1fr;
+      }
+      .metric-card.full-width {
+        grid-column: span 1;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- CABEÇALHO -->
+  <header>
+    <div class="header-title-group">
+      <span class="badge-discipline">⚓ Cálculo Diferencial e Integral I • Arquitetura Naval</span>
+      <h1>Taxa de Variação do Calado com a Carga: Curvas de Deslocamento</h1>
+      <p>Análise Matemática da Imersão de um Navio Petroleiro e Interpretação Geométrica da Derivada</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn-theme" id="btn-theme-toggle" title="Alternar contraste para projetor">
+        <span id="theme-icon">☀️</span>
+        <span id="theme-text">Modo Claro (Projetor)</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main class="main-container">
+    
+    <!-- COLUNA ESQUERDA: GRÁFICO E CONTROLES -->
+    <section class="left-column">
+      <div class="chart-panel">
+        <div id="plot-container"></div>
+      </div>
+
+      <div class="controls-panel">
+        <div class="slider-header">
+          <label for="draft-slider" class="slider-label">
+            Controle de Imersão / Calado (<span class="math-mono">h</span>):
+          </label>
+          <span class="slider-value-badge" id="slider-badge">h = 2.0 m</span>
+        </div>
+
+        <div class="slider-wrapper">
+          <input 
+            type="range" 
+            id="draft-slider" 
+            min="0.0" 
+            max="6.0" 
+            step="0.1" 
+            value="2.0"
+          />
+          <div class="slider-ticks">
+            <span>0.0 m (Leve)</span>
+            <span>1.0 m</span>
+            <span>2.0 m (Inicial)</span>
+            <span>3.0 m</span>
+            <span>4.0 m</span>
+            <span>5.0 m (Carregado)</span>
+            <span>6.0 m (Máx)</span>
+          </div>
+        </div>
+
+        <div class="buttons-row">
+          <div class="preset-group">
+            <button class="btn-control active-preset" id="btn-h2">
+              ⚓ Calado Inicial (h = 2 m)
+            </button>
+            <button class="btn-control" id="btn-h5">
+              🚢 Calado Carregado (h = 5 m)
+            </button>
+          </div>
+
+          <button class="btn-control btn-toggle-prismatic active" id="btn-toggle-prismatic">
+            <span class="status-dot"></span>
+            Comparar com Casco Prismático (V = 500h)
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- COLUNA DIREITA: DASHBOARD EM TEMPO REAL -->
+    <aside class="right-column">
+      <div class="dashboard-section-title">Telemetria Hidrostática em Tempo Real</div>
+
+      <div class="cards-grid">
+        <!-- Card 1: Calado Atual -->
+        <div class="metric-card">
+          <div class="card-header">
+            <span>Calado Atual</span>
+            <span class="card-formula-tag">h</span>
+          </div>
+          <div class="card-value" id="card-h">2.0 m</div>
+          <div class="card-subtext">Profundidade submersa do casco</div>
+        </div>
+
+        <!-- Card 2: Volume Submerso -->
+        <div class="metric-card">
+          <div class="card-header">
+            <span>Volume Submerso</span>
+            <span class="card-formula-tag">V(h)</span>
+          </div>
+          <div class="card-value" id="card-v">800.0 m³</div>
+          <div class="card-subtext">V(h) = 300h + 50h²</div>
+        </div>
+
+        <!-- Card 3: Taxa Instantânea / Área de Flutuação -->
+        <div class="metric-card card-derivative full-width">
+          <div class="card-header">
+            <span>Taxa Instantânea / Área de Flutuação (Coef. Angular m)</span>
+            <span class="card-formula-tag">dV/dh = Aw(h)</span>
+          </div>
+          <div class="card-value" id="card-dv">500.0 m²</div>
+          <div class="card-subtext">
+            Derivada <span class="math-mono">V'(h) = 300 + 100h</span> • Indica quantos m³ de deslocamento são necessários por metro de imersão adicional.
+          </div>
+        </div>
+
+        <!-- Card 4: Equação da Reta Tangente -->
+        <div class="metric-card card-equation full-width">
+          <div class="card-header">
+            <span>Equação da Reta Tangente no Ponto</span>
+            <span class="card-formula-tag">V = m·h + b</span>
+          </div>
+          <div class="card-value" id="card-tangent-eq">V = 500h - 200</div>
+          <div class="card-subtext" id="card-tangent-sub">
+            Aproximação linear local no ponto de contato (2.0; 800.0)
+          </div>
+        </div>
+      </div>
+
+      <!-- Visualização da Seção Transversal do Casco -->
+      <div class="hull-visual-card">
+        <div class="card-header">
+          <span>Geometria Transversal da Linha d'Água</span>
+          <span class="card-formula-tag" id="hull-width-tag">Aw = 500 m²</span>
+        </div>
+        <div class="hull-svg-container">
+          <svg id="hull-svg" viewBox="0 0 320 120" width="100%" height="100%">
+            <!-- Fundo e grade sutil -->
+            <line x1="20" y1="105" x2="300" y2="105" stroke="#475569" stroke-width="1" stroke-dasharray="3,3" />
+            
+            <!-- Polígono de Água Submersa (Dinâmico) -->
+            <polygon id="svg-water-poly" points="110,105 210,105 225,80 95,80" fill="rgba(14, 165, 233, 0.35)" />
+            
+            <!-- Linha d'Água (Aw) -->
+            <line id="svg-waterline" x1="30" y1="80" x2="290" y2="80" stroke="#0ea5e9" stroke-width="2" stroke-dasharray="5,3" />
+            <line id="svg-aw-highlight" x1="95" y1="80" x2="225" y2="80" stroke="#f59e0b" stroke-width="4" />
+
+            <!-- Contorno do Casco Prismático (Comparação Tracejada) -->
+            <rect id="svg-prismatic-box" x="95" y="15" width="130" height="90" fill="none" stroke="#a855f7" stroke-width="1.5" stroke-dasharray="4,4" />
+
+            <!-- Contorno do Casco Trapezoidal -->
+            <polygon points="110,105 210,105 265,15 55,15" fill="none" stroke="#f8fafc" id="svg-hull-outline" stroke-width="2.5" stroke-linejoin="round" />
+
+            <!-- Textos Indicadores no SVG -->
+            <text x="160" y="100" text-anchor="middle" fill="#cbd5e1" font-family="JetBrains Mono" font-size="10" id="svg-text-base">Base (h=0): 300 m²</text>
+            <text x="160" y="73" text-anchor="middle" fill="#f59e0b" font-family="JetBrains Mono" font-weight="bold" font-size="11" id="svg-text-aw">Aw(2.0) = 500 m²</text>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Painel de Interpretação Física -->
+      <div class="insight-box">
+        <div class="insight-badge">📌 Análise Física e Conclusão do Modelo</div>
+        <div class="insight-text" id="dynamic-insight">
+          Em <span class="math-mono">h = 2,0 m</span>, a inclinação da curva do casco trapezoidal (<span class="math-mono">m₁ = 500 m²</span>) iguala-se exatamente à taxa constante do casco prismático (<span class="math-mono">V' = 500 m²</span>).
+        </div>
+        <div class="insight-highlight">
+          <strong>Salto de Resistência (+60%):</strong> Ao passar de <span class="math-mono">h = 2 m</span> (<span class="math-mono">m₁ = 500 m²</span>) para <span class="math-mono">h = 5 m</span> (<span class="math-mono">m₂ = 800 m²</span>), a área da linha d'água expande <strong>60%</strong>, exigindo muito mais carga por metro adicional de imersão.
+        </div>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- LÓGICA MATEMÁTICA E GRÁFICA -->
+  <script>
+    // =========================================================================
+    // 1. MODELAGEM MATEMÁTICA OBRIGATÓRIA
+    // =========================================================================
+    // Casco Trapezoidal: V(h) = 300h + 50h²
+    function volumeTrapezoidal(h) {
+      return 300 * h + 50 * Math.pow(h, 2);
+    }
+
+    // Derivada / Área da Linha d'Água: V'(h) = dV/dh = 300 + 100h
+    function derivadaTrapezoidal(h) {
+      return 300 + 100 * h;
+    }
+
+    // Casco Prismático: V_p(h) = 500h
+    function volumePrismatico(h) {
+      return 500 * h;
+    }
+
+    // =========================================================================
+    // 2. ESTADO DA APLICAÇÃO E ELEMENTOS DO DOM
+    // =========================================================================
+    let currentH = 2.0;
+    let showPrismatic = true;
+    let isLightTheme = false;
+
+    const slider = document.getElementById('draft-slider');
+    const sliderBadge = document.getElementById('slider-badge');
+    const btnH2 = document.getElementById('btn-h2');
+    const btnH5 = document.getElementById('btn-h5');
+    const btnTogglePrismatic = document.getElementById('btn-toggle-prismatic');
+    const btnThemeToggle = document.getElementById('btn-theme-toggle');
+
+    const cardH = document.getElementById('card-h');
+    const cardV = document.getElementById('card-v');
+    const cardDV = document.getElementById('card-dv');
+    const cardTangentEq = document.getElementById('card-tangent-eq');
+    const cardTangentSub = document.getElementById('card-tangent-sub');
+    const dynamicInsight = document.getElementById('dynamic-insight');
+
+    // Elementos SVG da seção transversal
+    const svgWaterPoly = document.getElementById('svg-water-poly');
+    const svgWaterline = document.getElementById('svg-waterline');
+    const svgAwHighlight = document.getElementById('svg-aw-highlight');
+    const svgTextAw = document.getElementById('svg-text-aw');
+    const svgPrismaticBox = document.getElementById('svg-prismatic-box');
+    const svgHullOutline = document.getElementById('svg-hull-outline');
+    const hullWidthTag = document.getElementById('hull-width-tag');
+
+    // Pré-cálculo dos pontos das curvas base (0 a 6 m, passo 0.05 m)
+    const hValues = [];
+    const vTrapValues = [];
+    const vPrismValues = [];
+
+    for (let h = 0; h <= 6.001; h += 0.05) {
+      const hClean = Number(h.toFixed(2));
+      hValues.push(hClean);
+      vTrapValues.push(volumeTrapezoidal(hClean));
+      vPrismValues.push(volumePrismatico(hClean));
+    }
+
+    // =========================================================================
+    // 3. FORMATAÇÃO DA EQUAÇÃO DA RETA TANGENTE (V = m*h + b)
+    // =========================================================================
+    function formatNumberClean(num) {
+      return Number.isInteger(Number(num.toFixed(2)))
+        ? Number(num.toFixed(0)).toString()
+        : Number(num.toFixed(1)).toString();
+    }
+
+    function buildTangentEquationString(h0) {
+      const m = derivadaTrapezoidal(h0);
+      const v0 = volumeTrapezoidal(h0);
+      const b = v0 - m * h0;
+
+      const mStr = formatNumberClean(m);
+      const absB = Math.abs(b);
+      const bStr = formatNumberClean(absB);
+
+      if (absB < 0.01) {
+        return `V = ${mStr}h`;
+      } else if (b < 0) {
+        return `V = ${mStr}h - ${bStr}`;
+      } else {
+        return `V = ${mStr}h + ${bStr}`;
+      }
+    }
+
+    // =========================================================================
+    // 4. ATUALIZAÇÃO DO DIAGRAMA TRANSVERSAL (SVG) E PAINEL DE TEXTO
+    // =========================================================================
+    function updateHullSVG(h, aw) {
+      const ratio = h / 6.0;
+      const yWater = 105 - ratio * 90;
+
+      const xLeft = 110 - ratio * (110 - 55);
+      const xRight = 210 + ratio * (265 - 210);
+
+      svgWaterPoly.setAttribute('points', `110,105 210,105 ${xRight.toFixed(1)},${yWater.toFixed(1)} ${xLeft.toFixed(1)},${yWater.toFixed(1)}`);
+      svgWaterline.setAttribute('y1', yWater.toFixed(1));
+      svgWaterline.setAttribute('y2', yWater.toFixed(1));
+
+      svgAwHighlight.setAttribute('x1', xLeft.toFixed(1));
+      svgAwHighlight.setAttribute('x2', xRight.toFixed(1));
+      svgAwHighlight.setAttribute('y1', yWater.toFixed(1));
+      svgAwHighlight.setAttribute('y2', yWater.toFixed(1));
+
+      const textY = Math.max(14, yWater - 7);
+      svgTextAw.setAttribute('y', textY.toFixed(1));
+      svgTextAw.textContent = `Aw(${h.toFixed(1)}) = ${formatNumberClean(aw)} m²`;
+      hullWidthTag.textContent = `Aw = ${formatNumberClean(aw)} m²`;
+
+      svgPrismaticBox.style.display = showPrismatic ? 'block' : 'none';
+      svgHullOutline.setAttribute('stroke', isLightTheme ? '#0f172a' : '#f8fafc');
+    }
+
+    function updatePhysicalInsight(h, v, m) {
+      if (Math.abs(h - 2.0) < 0.05) {
+        dynamicInsight.innerHTML = `
+          <strong>Ponto Chave 1 (Calado Inicial <span class="math-mono">h = 2 m</span>):</strong>
+          O volume deslocado é <span class="math-mono">V(2) = 800 m³</span> e a inclinação da tangente é <span class="math-mono">m₁ = 500 m²</span> (<span class="math-mono">V = 500h - 200</span>). Neste ponto exato, a reta tangente é <strong>paralela</strong> à reta do casco prismático (<span class="math-mono">V = 500h</span>).
+        `;
+      } else if (Math.abs(h - 5.0) < 0.05) {
+        dynamicInsight.innerHTML = `
+          <strong>Ponto Chave 2 (Calado Carregado <span class="math-mono">h = 5 m</span>):</strong>
+          O volume deslocado atinge <span class="math-mono">V(5) = 2750 m³</span> e o coeficiente angular salta para <span class="math-mono">m₂ = 800 m²</span> (<span class="math-mono">V = 800h - 1250</span>), demonstrando a forte inclinação da curva em grandes calados.
+        `;
+      } else if (h < 2.0) {
+        dynamicInsight.innerHTML = `
+          <strong>Regime de Baixa Imersão (<span class="math-mono">h = ${h.toFixed(1)} m</span>):</strong>
+          A área da linha d'água atual (<span class="math-mono">Aw = ${formatNumberClean(m)} m²</span>) ainda é menor que a do casco prismático de referência (<span class="math-mono">500 m²</span>). O navio afunda mais facilmente com pequenos acréscimos de carga.
+        `;
+      } else {
+        const pctIncrease = (((m - 500) / 500) * 100).toFixed(0);
+        dynamicInsight.innerHTML = `
+          <strong>Regime de Alta Imersão (<span class="math-mono">h = ${h.toFixed(1)} m</span>):</strong>
+          Com <span class="math-mono">Aw = ${formatNumberClean(m)} m²</span>, o casco já apresenta <strong>+${pctIncrease}%</strong> de resistência ao afundamento em relação ao calado inicial (<span class="math-mono">h = 2 m</span>), devido ao alargamento geométrico das paredes do navio.
+        `;
+      }
+    }
+
+    // =========================================================================
+    // 5. RENDERIZAÇÃO E ATUALIZAÇÃO DO GRÁFICO PLOTLY (LAYOUT CORRIGIDO)
+    // =========================================================================
+    function getPlotTraces(h0) {
+      const v0 = volumeTrapezoidal(h0);
+      const m = derivadaTrapezoidal(h0);
+      const b = v0 - m * h0;
+
+      // Pontos para a Reta Tangente ao longo do domínio [0, 6]
+      const hTangent = [0, 6];
+      const vTangent = [b, m * 6 + b];
+
+      const traces = [
+        // 1. Curva do Casco Prismático (Comparação Didática)
+        {
+          x: hValues,
+          y: vPrismValues,
+          type: 'scatter',
+          mode: 'lines',
+          name: 'Casco Prismático Reto',
+          visible: showPrismatic ? true : 'legendonly',
+          line: {
+            color: isLightTheme ? '#7e22ce' : '#a855f7',
+            width: 2.5,
+            dash: 'dash'
+          },
+          hovertemplate: '<b>Casco Prismático</b><br>Calado h: %{x:.2f} m<br>Volume V: %{y:.1f} m³<extra></extra>'
+        },
+
+        // 2. Curva Real do Estudo (Casco Trapezoidal)
+        {
+          x: hValues,
+          y: vTrapValues,
+          type: 'scatter',
+          mode: 'lines',
+          name: 'Casco Trapezoidal',
+          line: {
+            color: isLightTheme ? '#0284c7' : '#0ea5e9',
+            width: 4
+          },
+          hovertemplate: '<b>Casco Trapezoidal</b><br>Calado h: %{x:.2f} m<br>Volume V: %{y:.1f} m³<extra></extra>'
+        },
+
+        // 3. Reta Tangente Dinâmica no Ponto (h0, V0)
+        {
+          x: hTangent,
+          y: vTangent,
+          type: 'scatter',
+          mode: 'lines',
+          name: 'Reta Tangente',
+          line: {
+            color: isLightTheme ? '#d97706' : '#f59e0b',
+            width: 3
+          },
+          hovertemplate: '<b>Reta Tangente</b><br>h: %{x:.2f} m<br>V: %{y:.1f} m³<extra></extra>'
+        },
+
+        // 4. Linhas Guias de Coordenadas (Projeção nos Eixos X e Y)
+        {
+          x: [h0, h0, 0],
+          y: [0, v0, v0],
+          type: 'scatter',
+          mode: 'lines',
+          name: 'Projeção Cartesiana',
+          showlegend: false,
+          line: {
+            color: isLightTheme ? '#64748b' : '#94a3b8',
+            width: 1.5,
+            dash: 'dot'
+          },
+          hoverinfo: 'skip'
+        },
+
+        // 5. Marcadores de Referência dos Pontos Chave (h = 2 m e h = 5 m)
+        {
+          x: [2, 5],
+          y: [800, 2750],
+          type: 'scatter',
+          mode: 'markers',
+          name: 'Pontos de Estudo',
+          marker: {
+            color: isLightTheme ? '#ffffff' : '#0f172a',
+            size: 9,
+            line: {
+              color: isLightTheme ? '#0284c7' : '#38bdf8',
+              width: 2.5
+            }
+          },
+          hovertemplate: '<b>Ponto de Estudo</b><br>h = %{x} m<br>V = %{y} m³<extra></extra>'
+        },
+
+        // 6. Ponto de Contato Atual (h, V) em Destaque (Oculto na legenda para não flutuar no topo)
+        {
+          x: [h0],
+          y: [v0],
+          type: 'scatter',
+          mode: 'markers+text',
+          name: 'Ponto de Tangência',
+          showlegend: false,
+          text: [`  P(${h0.toFixed(1)}m; ${v0.toFixed(0)}m³) | m = ${formatNumberClean(m)} m²`],
+          textposition: h0 > 4.2 ? 'top left' : 'bottom right',
+          textfont: {
+            family: 'JetBrains Mono, monospace',
+            size: 13,
+            color: isLightTheme ? '#b45309' : '#fbbf24'
+          },
+          marker: {
+            color: '#f59e0b',
+            size: 14,
+            symbol: 'circle',
+            line: {
+              color: '#ffffff',
+              width: 3
+            }
+          },
+          hovertemplate: `<b>Ponto de Contato</b><br>h = ${h0.toFixed(1)} m<br>V(h) = ${v0.toFixed(1)} m³<br>dV/dh = ${m.toFixed(1)} m²<extra></extra>`
+        }
+      ];
+
+      return traces;
+    }
+
+    function getPlotLayout() {
+      const textColor = isLightTheme ? '#0f172a' : '#f8fafc';
+      const mutedColor = isLightTheme ? '#475569' : '#cbd5e1';
+      const gridColor = isLightTheme ? '#e2e8f0' : '#1e293b';
+      const zeroLineColor = isLightTheme ? '#94a3b8' : '#475569';
+      const paperBg = isLightTheme ? '#ffffff' : '#111827';
+
+      return {
+        paper_bgcolor: paperBg,
+        plot_bgcolor: paperBg,
+        // Margem superior ampliada (t: 95) e margem esquerda ampliada (l: 85)
+        margin: { t: 95, r: 40, b: 60, l: 85 },
+        title: {
+          text: '<b>Curva de Deslocamento V(h) × Calado (h)</b>',
+          y: 0.96,
+          x: 0.5,
+          xanchor: 'center',
+          yanchor: 'top',
+          font: {
+            family: 'Inter, sans-serif',
+            size: 17,
+            color: textColor
+          }
+        },
+        legend: {
+          orientation: 'h',
+          y: 1.04,
+          x: 0.5,
+          xanchor: 'center',
+          yanchor: 'bottom',
+          bgcolor: 'rgba(0,0,0,0)',
+          font: {
+            family: 'Inter, sans-serif',
+            size: 12.5,
+            color: textColor
+          }
+        },
+        xaxis: {
+          title: {
+            text: '<b>Calado h (metros)</b>',
+            standoff: 14,
+            font: { family: 'Inter, sans-serif', size: 14, color: textColor }
+          },
+          range: [0, 6.2],
+          dtick: 1.0,
+          gridcolor: gridColor,
+          zerolinecolor: zeroLineColor,
+          zerolinewidth: 2,
+          tickfont: { family: 'JetBrains Mono, monospace', size: 12, color: mutedColor }
+        },
+        yaxis: {
+          title: {
+            text: '<b>Volume Deslocado V (m³)</b>',
+            standoff: 18,
+            font: { family: 'Inter, sans-serif', size: 14, color: textColor }
+          },
+          range: [0, 3500],
+          dtick: 500,
+          automargin: true,
+          gridcolor: gridColor,
+          zerolinecolor: zeroLineColor,
+          zerolinewidth: 2,
+          tickfont: { family: 'JetBrains Mono, monospace', size: 12, color: mutedColor }
+        },
+        hovermode: 'closest'
+      };
+    }
+
+    // =========================================================================
+    // 6. FUNÇÃO MESTRE DE SINCRONIZAÇÃO DA INTERFACE
+    // =========================================================================
+    function updateSimulator(hValue) {
+      currentH = Number(parseFloat(hValue).toFixed(1));
+      const vValue = volumeTrapezoidal(currentH);
+      const dvValue = derivadaTrapezoidal(currentH);
+      const eqString = buildTangentEquationString(currentH);
+
+      // Atualiza Slider e Badge
+      slider.value = currentH;
+      sliderBadge.textContent = `h = ${currentH.toFixed(1)} m`;
+
+      // Destaque nos botões de atalho h=2 e h=5
+      btnH2.classList.toggle('active-preset', Math.abs(currentH - 2.0) < 0.01);
+      btnH5.classList.toggle('active-preset', Math.abs(currentH - 5.0) < 0.01);
+
+      // Atualiza Cards do Dashboard
+      cardH.textContent = `${currentH.toFixed(1)} m`;
+      cardV.textContent = `${vValue.toFixed(1)} m³`;
+      cardDV.textContent = `${dvValue.toFixed(1)} m²`;
+      cardTangentEq.textContent = eqString;
+      cardTangentSub.textContent = `Tangente geométrica em (${currentH.toFixed(1)} m; ${vValue.toFixed(1)} m³) com m = ${formatNumberClean(dvValue)} m²`;
+
+      // Atualiza SVG da seção transversal e Análise Física
+      updateHullSVG(currentH, dvValue);
+      updatePhysicalInsight(currentH, vValue, dvValue);
+
+      // Atualiza Gráfico Plotly em Tempo Real
+      Plotly.react(
+        'plot-container',
+        getPlotTraces(currentH),
+        getPlotLayout(),
+        {
+          responsive: true,
+          displaylogo: false,
+          modeBarButtonsToRemove: ['lasso2d', 'select2d', 'autoScale2d']
+        }
+      );
+    }
+
+    // =========================================================================
+    // 7. EVENT LISTENERS (INTERAÇÃO DO USUÁRIO)
+    // =========================================================================
+    slider.addEventListener('input', (e) => {
+      updateSimulator(e.target.value);
+    });
+
+    btnH2.addEventListener('click', () => {
+      updateSimulator(2.0);
+    });
+
+    btnH5.addEventListener('click', () => {
+      updateSimulator(5.0);
+    });
+
+    btnTogglePrismatic.addEventListener('click', () => {
+      showPrismatic = !showPrismatic;
+      btnTogglePrismatic.classList.toggle('active', showPrismatic);
+      updateSimulator(currentH);
+    });
+
+    btnThemeToggle.addEventListener('click', () => {
+      isLightTheme = !isLightTheme;
+      document.body.classList.toggle('light-theme', isLightTheme);
+      document.getElementById('theme-icon').textContent = isLightTheme ? '🌙' : '☀️';
+      document.getElementById('theme-text').textContent = isLightTheme
+        ? 'Modo Escuro Naval'
+        : 'Modo Claro (Projetor)';
+      updateSimulator(currentH);
+    });
+
+    window.addEventListener('resize', () => {
+      Plotly.Plots.resize('plot-container');
+    });
+
+    // Inicialização no Ponto 1 (h = 2.0 m)
+    window.addEventListener('DOMContentLoaded', () => {
+      updateSimulator(2.0);
+    });
+  </script>
+</body>
+</html>
